@@ -33,4 +33,6 @@ class LogoutUserView(APIView):
 
         if token:
             token.delete()
-        return Response({"message": "User logged out successfully"}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "User logged out successfully"}, status=status.HTTP_200_OK
+        )
