@@ -19,17 +19,24 @@ class Profile(models.Model):
         WOMAN = "Woman"
         ANOTHER = "Another"
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user")
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user"
+    )
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     nick_name = models.CharField(max_length=255)
-    sex = models.CharField(max_length=7, choices=SexChoices.choices, default=SexChoices.ANOTHER)
+    sex = models.CharField(
+        max_length=7, choices=SexChoices.choices, default=SexChoices.ANOTHER
+    )
     registered = models.DateField(auto_now_add=True)
     bio = models.TextField()
     image = models.ImageField(null=True, upload_to=profile_image_file_path)
 
     class Meta:
-        unique_together = ("last_name", "nick_name",)
+        unique_together = (
+            "last_name",
+            "nick_name",
+        )
 
     def __str__(self):
         return f"{self.first_name} {self.nick_name} {self.last_name}"

@@ -5,9 +5,7 @@ from social_media.models import Profile
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    email = serializers.SlugRelatedField(
-        source=settings.AUTH_USER_MODEL, slug_field="email", many=False, read_only=False
-    )
+    email = serializers.EmailField(source="user.email", read_only=True)
 
     class Meta:
         model = Profile
@@ -20,7 +18,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             "sex",
             "bio",
             "registered",
-            "image"
+            "image",
         )
-        read_only_fields = ("registered", )
-
+        read_only_fields = ("registered",)
