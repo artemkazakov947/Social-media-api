@@ -7,6 +7,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 
+import permissions
 from social_media.models import Profile
 from social_media.serializers import ProfileSerializer
 
@@ -15,6 +16,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
     serializer_class = ProfileSerializer
     queryset = Profile.objects.all()
     authentication_classes = (TokenAuthentication,)
+    permission_classes = permissions.IsOwnerOrReadOnly,
 
     def get_queryset(self) -> QuerySet:
         first_name = self.request.query_params.get("first_name")
@@ -56,4 +58,3 @@ class ProfileViewSet(viewsets.ModelViewSet):
         elif request.method == "DELETE":
             profile.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-
