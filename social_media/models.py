@@ -40,3 +40,11 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.nick_name} {self.last_name}"
+
+
+class Follow(models.Model):
+    follower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following")
+    following = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="followers")
+
+    class Meta:
+        unique_together = ("follower", "following")
