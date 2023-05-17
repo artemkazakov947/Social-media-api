@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 
 import permissions
-from social_media.models import Profile
+from social_media.models import Profile, Follow
 from social_media.serializers import ProfileSerializer
 
 
@@ -58,3 +58,22 @@ class ProfileViewSet(viewsets.ModelViewSet):
         elif request.method == "DELETE":
             profile.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=["GET"], detail=True, url_path="follow")
+    def follow(self, request: Request, pk=None) -> Response:
+        profile_to_follow = self.get_object()
+        follower = request.user
+        if follower.following.filter(following=profile_to_follow).exists():
+            return Response({"message": "You are already following this profile"}, status=status.HTTP_400_BAD_REQUEST)
+        Follow.objects.create(follower=follower, following=profile_to_follow)
+        return Response({"message": "Now you now following this profile"}, status=status.HTTP_200_OK)
+
+    @action(methods=["GET"], detail=True, url_path="unfollow")
+    def unfollow(self, request: Request, pk=None) -> Response:
+        profile_to_unfollow = self.get_object()
+        follower = request.user
+        if not follower.following.filter(following=profile_to_unfollow).exists():
+            return Response({"message": "You are not follow this profile"}, status=status.HTTP_400_BAD_REQUEST)
+        follow = follower.following.get(following=profile_to_unfollow)
+        follow.delete()
+        return Response({"message": "You have unfollowed this profile"})
