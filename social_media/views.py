@@ -9,7 +9,8 @@ from rest_framework.serializers import Serializer
 
 import permissions
 from social_media.models import Profile, Follow
-from social_media.serializers import ProfileSerializer
+from social_media.serializers import ProfileSerializer, ProfileFollowersSerializer
+from user.serializers import UserSerializer
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
@@ -77,3 +78,19 @@ class ProfileViewSet(viewsets.ModelViewSet):
         follow = follower.following.get(following=profile_to_unfollow)
         follow.delete()
         return Response({"message": "You have unfollowed this profile"})
+
+    @action(methods=["GET"], detail=False, url_path="me/list_followers")
+    def list_followers(self, request: Request) -> Response:
+        user_profile = request.user.profile
+        followers = Follow.objects.filter(following=user_profile)
+        followers_profile = [follower.follower.profile for follower in followers]
+        serializer = ProfileFollowersSerializer(followers_profile, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(methods=["GET"], detail=False, url_path="me/list_following")
+    def list_following(self, request: Request) -> Response:
+        user = request.user
+        followings = Follow.objects.filter(follower=user)
+        following_users = [following.following.user for following in followings]
+        serializer = UserSerializer(following_users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
