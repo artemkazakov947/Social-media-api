@@ -64,11 +64,11 @@ class Post(models.Model):
     text = models.TextField()
     image = models.ImageField(null=True, upload_to=post_image_file_path)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts")
-    pub_date = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-updated"]
 
     def __str__(self):
-        return f"Author: {self.user}, date: {self.pub_date}"
+        return f"Author: {self.user}, date: {self.created}"
