@@ -8,8 +8,13 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 
 import permissions
-from social_media.models import Profile, Follow
-from social_media.serializers import ProfileSerializer, ProfileFollowersSerializer
+from social_media.models import Profile, Follow, Post
+from social_media.serializers import (
+    ProfileSerializer,
+    ProfileFollowersSerializer,
+    PostListSerializer,
+    PostDetailSerializer
+)
 from user.serializers import UserSerializer
 
 
@@ -94,3 +99,48 @@ class ProfileViewSet(viewsets.ModelViewSet):
         following_users = [following.following.user for following in followings]
         serializer = UserSerializer(following_users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PostViewSet(viewsets.ModelViewSet):
+    queryset = Post.objects.all()
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = permissions.IsOwnerOrReadOnly,
+
+    def get_serializer_class(self):
+        if self.action == 'my_posts':
+            if self.request.method == 'GET':
+                return PostListSerializer
+            elif self.request.method == 'POST':
+                return PostDetailSerializer
+
+        serializer_classes = {
+            "list": PostListSerializer,
+            "create": PostDetailSerializer,
+            "retrieve": PostDetailSerializer,
+            "update": PostDetailSerializer,
+            "partial_update": PostDetailSerializer,
+        }
+        return serializer_classes.get(self.action)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(methods=["GET", "POST"], url_path="my_posts", detail=False)
+    def my_posts(self, request: Request) -> Response:
+        if request.method == "GET":
+            posts = Post.objects.filter(user=request.user)
+            serializer = PostListSerializer(posts, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        elif request.method == "POST":
+            serializer = PostDetailSerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=["GET"], detail=False, url_path="following_posts")
+    def following_posts(self, request: Request) -> Response:
+        following_profiles = Profile.objects.filter(followers__follower=request.user)
+        posts = Post.objects.filter(user__profile__in=following_profiles)
+        serializer = PostListSerializer(posts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
