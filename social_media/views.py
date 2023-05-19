@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db.models import QuerySet, Q
 from rest_framework import viewsets, status
 from rest_framework.authentication import TokenAuthentication
@@ -20,7 +21,7 @@ from user.serializers import UserSerializer
 
 class ProfileViewSet(viewsets.ModelViewSet):
     serializer_class = ProfileSerializer
-    queryset = Profile.objects.all()
+    queryset = Profile.objects.all().select_related("user")
     authentication_classes = (TokenAuthentication,)
     permission_classes = permissions.IsOwnerOrReadOnly,
 
@@ -87,8 +88,8 @@ class ProfileViewSet(viewsets.ModelViewSet):
     @action(methods=["GET"], detail=False, url_path="me/list_followers")
     def list_followers(self, request: Request) -> Response:
         user_profile = request.user.profile
-        followers = Follow.objects.filter(following=user_profile)
-        followers_profile = [follower.follower.profile for follower in followers]
+        followers = Follow.objects.filter(following=user_profile).select_related("follower")
+        followers_profile = Profile.objects.filter(user__following__in=followers)
         serializer = ProfileFollowersSerializer(followers_profile, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -102,7 +103,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
 
 
 class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all()
+    queryset = Post.objects.all().select_related("user__profile")
     authentication_classes = (TokenAuthentication,)
     permission_classes = permissions.IsOwnerOrReadOnly,
 
@@ -136,7 +137,7 @@ class PostViewSet(viewsets.ModelViewSet):
     @action(methods=["GET", "POST"], url_path="my_posts", detail=False)
     def my_posts(self, request: Request) -> Response:
         if request.method == "GET":
-            posts = Post.objects.filter(user=request.user)
+            posts = Post.objects.filter(user=request.user).select_related("user__profile")
             serializer = PostListSerializer(posts, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         elif request.method == "POST":
