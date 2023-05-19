@@ -32,10 +32,7 @@ class ProfileFollowersSerializer(serializers.ModelSerializer):
 
 
 class PostListSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        source=settings.AUTH_USER_MODEL, slug_field="email", many=False, read_only=True
-    )
-    created = serializers.DateTimeField(source="post.pub_date", read_only=True)
+    author = serializers.CharField(source="user.profile", read_only=True)
 
     class Meta:
         model = Post
@@ -50,6 +47,7 @@ class PostListSerializer(serializers.ModelSerializer):
 
 class PostDetailSerializer(PostListSerializer):
     class Meta:
+        model = Post
         fields = (
             "id",
             "author",
@@ -59,5 +57,3 @@ class PostDetailSerializer(PostListSerializer):
             "text",
             "image",
         )
-
-
