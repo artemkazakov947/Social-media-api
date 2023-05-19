@@ -1,4 +1,4 @@
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Q
 from rest_framework import viewsets, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import action
@@ -121,6 +121,14 @@ class PostViewSet(viewsets.ModelViewSet):
             "partial_update": PostDetailSerializer,
         }
         return serializer_classes.get(self.action)
+
+    def get_queryset(self):
+        queryset = self.queryset
+        hashtag = self.request.query_params.get("hashtag")
+
+        if hashtag:
+            queryset = queryset.filter(Q(text__icontains=f"#{hashtag}") | Q(topic__icontains=f"#{hashtag}"))
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
