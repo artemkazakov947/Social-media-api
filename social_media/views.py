@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db.models import QuerySet, Q
 from rest_framework import viewsets, status
 from rest_framework.authentication import TokenAuthentication
