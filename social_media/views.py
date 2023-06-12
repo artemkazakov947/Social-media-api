@@ -13,7 +13,7 @@ from social_media.serializers import (
     ProfileSerializer,
     ProfileFollowersSerializer,
     PostListSerializer,
-    PostDetailSerializer
+    PostDetailSerializer,
 )
 from user.serializers import UserSerializer
 
@@ -22,7 +22,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
     serializer_class = ProfileSerializer
     queryset = Profile.objects.all().select_related("user")
     authentication_classes = (TokenAuthentication,)
-    permission_classes = permissions.IsOwnerOrReadOnly,
+    permission_classes = (permissions.IsOwnerOrReadOnly,)
 
     def get_queryset(self) -> QuerySet:
         first_name = self.request.query_params.get("first_name")
@@ -70,30 +70,40 @@ class ProfileViewSet(viewsets.ModelViewSet):
         profile_to_follow = self.get_object()
         follower = request.user
         if follower.following.filter(following=profile_to_follow).exists():
-            return Response({"message": "You are already following this profile"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "You are already following this profile"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         Follow.objects.create(follower=follower, following=profile_to_follow)
-        return Response({"message": "Now you now following this profile"}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Now you now following this profile"}, status=status.HTTP_200_OK
+        )
 
     @action(methods=["GET"], detail=True, url_path="unfollow")
     def unfollow(self, request: Request, pk=None) -> Response:
         profile_to_unfollow = self.get_object()
         follower = request.user
         if not follower.following.filter(following=profile_to_unfollow).exists():
-            return Response({"message": "You are not follow this profile"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "You are not follow this profile"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         follow = follower.following.get(following=profile_to_unfollow)
         follow.delete()
         return Response({"message": "You have unfollowed this profile"})
 
-    @action(methods=["GET"], detail=False, url_path="me/list_followers")
-    def list_followers(self, request: Request) -> Response:
+    @action(methods=["GET"], detail=False, url_path="me/list_following")
+    def list_following(self, request: Request) -> Response:
         user_profile = request.user.profile
-        followers = Follow.objects.filter(following=user_profile).select_related("follower")
+        followers = Follow.objects.filter(following=user_profile).select_related(
+            "follower"
+        )
         followers_profile = Profile.objects.filter(user__following__in=followers)
         serializer = ProfileFollowersSerializer(followers_profile, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=["GET"], detail=False, url_path="me/list_following")
-    def list_following(self, request: Request) -> Response:
+    @action(methods=["GET"], detail=False, url_path="me/list_followers")
+    def list_followers(self, request: Request) -> Response:
         user = request.user
         followings = Follow.objects.filter(follower=user)
         following_users = [following.following.user for following in followings]
@@ -104,13 +114,13 @@ class ProfileViewSet(viewsets.ModelViewSet):
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all().select_related("user__profile")
     authentication_classes = (TokenAuthentication,)
-    permission_classes = permissions.IsOwnerOrReadOnly,
+    permission_classes = (permissions.IsOwnerOrReadOnly,)
 
     def get_serializer_class(self):
-        if self.action == 'my_posts':
-            if self.request.method == 'GET':
+        if self.action == "my_posts":
+            if self.request.method == "GET":
                 return PostListSerializer
-            elif self.request.method == 'POST':
+            elif self.request.method == "POST":
                 return PostDetailSerializer
 
         serializer_classes = {
@@ -127,7 +137,9 @@ class PostViewSet(viewsets.ModelViewSet):
         hashtag = self.request.query_params.get("hashtag")
 
         if hashtag:
-            queryset = queryset.filter(Q(text__icontains=f"#{hashtag}") | Q(topic__icontains=f"#{hashtag}"))
+            queryset = queryset.filter(
+                Q(text__icontains=f"#{hashtag}") | Q(topic__icontains=f"#{hashtag}")
+            )
         return queryset
 
     def perform_create(self, serializer):
@@ -136,7 +148,9 @@ class PostViewSet(viewsets.ModelViewSet):
     @action(methods=["GET", "POST"], url_path="my_posts", detail=False)
     def my_posts(self, request: Request) -> Response:
         if request.method == "GET":
-            posts = Post.objects.filter(user=request.user).select_related("user__profile")
+            posts = Post.objects.filter(user=request.user).select_related(
+                "user__profile"
+            )
             serializer = PostListSerializer(posts, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         elif request.method == "POST":
@@ -151,4 +165,3 @@ class PostViewSet(viewsets.ModelViewSet):
         posts = Post.objects.filter(user__profile__in=following_profiles)
         serializer = PostListSerializer(posts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-

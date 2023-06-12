@@ -11,4 +11,4 @@ class PostAdmin(admin.ModelAdmin):
     list_display = ["id", "topic", "user", "created", "updated"]
     readonly_fields = list_display
     list_filter = ("user", "topic")
-    search_fields = ("topic", )
+    search_fields = ("topic",)

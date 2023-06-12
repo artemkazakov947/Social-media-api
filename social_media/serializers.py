@@ -1,4 +1,3 @@
-from django.conf import settings
 from rest_framework import serializers
 
 from social_media.models import Profile, Post
@@ -28,7 +27,13 @@ class ProfileFollowersSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ("first_name", "last_name", "nick_name", "email", "image",)
+        fields = (
+            "first_name",
+            "last_name",
+            "nick_name",
+            "email",
+            "image",
+        )
 
 
 class PostListSerializer(serializers.ModelSerializer):

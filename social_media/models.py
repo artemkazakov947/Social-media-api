@@ -52,8 +52,12 @@ class Profile(models.Model):
 
 
 class Follow(models.Model):
-    follower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following")
-    following = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name="followers")
+    follower = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following"
+    )
+    following = models.ForeignKey(
+        Profile, on_delete=models.CASCADE, related_name="followers"
+    )
 
     class Meta:
         unique_together = ("follower", "following")
@@ -63,7 +67,9 @@ class Post(models.Model):
     topic = models.CharField(max_length=255)
     text = models.TextField()
     image = models.ImageField(null=True, upload_to=post_image_file_path)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts"
+    )
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
