@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from social_media.models import Profile, Post
+from social_media.models import Profile, Post, Comment
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -62,3 +62,17 @@ class PostDetailSerializer(PostListSerializer):
             "text",
             "image",
         )
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = (
+            "id",
+            "text",
+            "post",
+            "author",
+            "created",
+            "updated",
+        )
+        read_only_fields = ("author", "post")
