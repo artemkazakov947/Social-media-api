@@ -92,3 +92,9 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author} to post id: {self.post.id}"
+
+
+class Like(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="likes")
+    liked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="likes")
+    
