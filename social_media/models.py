@@ -79,6 +79,20 @@ class Post(models.Model):
     def __str__(self):
         return f"Author: {self.user}, date: {self.created}"
 
+    @property
+    def get_likes(self) -> int:
+        return self.likes.count()
+
+    @property
+    def get_likers(self) -> list:
+        likes = Like.objects.filter(post=self)
+        return [like.user.email for like in likes]
+
+
+class Like(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="likes")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="likes")
+
 
 class Comment(models.Model):
     text = models.TextField()
@@ -92,9 +106,3 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author} to post id: {self.post.id}"
-
-
-class Like(models.Model):
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="likes")
-    liked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="likes")
-    
