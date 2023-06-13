@@ -38,6 +38,7 @@ class ProfileFollowersSerializer(serializers.ModelSerializer):
 
 class PostListSerializer(serializers.ModelSerializer):
     author = serializers.CharField(source="user.profile", read_only=True)
+    likes = serializers.IntegerField(source="get_likes")
 
     class Meta:
         model = Post
@@ -47,10 +48,13 @@ class PostListSerializer(serializers.ModelSerializer):
             "topic",
             "created",
             "updated",
+            "likes",
         )
 
 
 class PostDetailSerializer(PostListSerializer):
+    liked_by = serializers.ReadOnlyField(source="get_likers")
+
     class Meta:
         model = Post
         fields = (
@@ -61,6 +65,7 @@ class PostDetailSerializer(PostListSerializer):
             "updated",
             "text",
             "image",
+            "liked_by"
         )
 
 
