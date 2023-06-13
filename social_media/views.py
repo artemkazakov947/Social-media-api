@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 
 import permissions
-from social_media.models import Profile, Follow, Post, Comment
+from social_media.models import Profile, Follow, Post, Comment, Like
 from social_media.serializers import (
     ProfileSerializer,
     ProfileFollowersSerializer,
@@ -168,6 +168,21 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = PostListSerializer(posts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(methods=["GET"], detail=True, url_path="like_unlike")
+    def like_unlike(self, request: Request, pk=None) -> Response:
+        post = get_object_or_404(Post, pk=pk)
+        is_liked = post.likes.filter(user=request.user)
+        serializer = PostDetailSerializer(post)
+        if not is_liked:
+            Like.objects.create(
+                post=post,
+                user=request.user
+            )
+        else:
+            like = Like.objects.get(post=post, user=request.user)
+            like.delete()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all().select_related("author", "post")
@@ -176,7 +191,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsOwnerOrReadOnly,)
 
     @cached_property
-    def get_post(self):
+    def get_post(self) -> Post:
         post_id = self.kwargs.get("post_pk")
         try:
             post = Post.objects.get(id=post_id)
@@ -184,8 +199,8 @@ class CommentViewSet(viewsets.ModelViewSet):
             raise NotFound("A post with given id does not exist")
         return post
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: Serializer) -> None:
         serializer.save(author=self.request.user, post=self.get_post)
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         return self.queryset.filter(post=self.get_post)
