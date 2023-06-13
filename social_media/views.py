@@ -1,19 +1,21 @@
 from django.db.models import QuerySet, Q
+from django.utils.functional import cached_property
 from rest_framework import viewsets, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.generics import get_object_or_404
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 
 import permissions
-from social_media.models import Profile, Follow, Post
+from social_media.models import Profile, Follow, Post, Comment
 from social_media.serializers import (
     ProfileSerializer,
     ProfileFollowersSerializer,
     PostListSerializer,
-    PostDetailSerializer,
+    PostDetailSerializer, CommentSerializer,
 )
 from user.serializers import UserSerializer
 
@@ -165,3 +167,25 @@ class PostViewSet(viewsets.ModelViewSet):
         posts = Post.objects.filter(user__profile__in=following_profiles)
         serializer = PostListSerializer(posts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all().select_related("author", "post")
+    serializer_class = CommentSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (permissions.IsOwnerOrReadOnly,)
+
+    @cached_property
+    def get_post(self):
+        post_id = self.kwargs.get("post_pk")
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            raise NotFound("A post with given id does not exist")
+        return post
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, post=self.get_post)
+
+    def get_queryset(self):
+        return self.queryset.filter(post=self.get_post)
