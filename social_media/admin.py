@@ -20,4 +20,3 @@ class CommentAdmin(admin.ModelAdmin):
     readonly_fields = list_display
     list_filter = ("author", "post")
     search_fields = ("post",)
-

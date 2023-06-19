@@ -65,7 +65,7 @@ class PostDetailSerializer(PostListSerializer):
             "updated",
             "text",
             "image",
-            "liked_by"
+            "liked_by",
         )
 
 

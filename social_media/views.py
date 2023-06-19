@@ -15,7 +15,8 @@ from social_media.serializers import (
     ProfileSerializer,
     ProfileFollowersSerializer,
     PostListSerializer,
-    PostDetailSerializer, CommentSerializer,
+    PostDetailSerializer,
+    CommentSerializer,
 )
 from user.serializers import UserSerializer
 
@@ -174,10 +175,7 @@ class PostViewSet(viewsets.ModelViewSet):
         is_liked = post.likes.filter(user=request.user)
         serializer = PostDetailSerializer(post)
         if not is_liked:
-            Like.objects.create(
-                post=post,
-                user=request.user
-            )
+            Like.objects.create(post=post, user=request.user)
         else:
             like = Like.objects.get(post=post, user=request.user)
             like.delete()
