@@ -29,6 +29,7 @@ class LogoutUserView(APIView):
     authentication_classes = (TokenAuthentication,)
 
     def get(self, request: Request) -> Response:
+        """Users are able to logout and invalidate their token"""
         token = request.auth
 
         if token:

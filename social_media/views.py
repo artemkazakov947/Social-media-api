@@ -1,5 +1,6 @@
 from django.db.models import QuerySet, Q
 from django.utils.functional import cached_property
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import action
@@ -49,11 +50,61 @@ class ProfileViewSet(viewsets.ModelViewSet):
 
         return queryset.distinct()
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="first_name",
+                type={"type": "str"},
+                description="Filter for first_name "
+                "(ex ex ?first_name=artem will return all users with first_name artem or users first_name wich include 'artem')",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="last_name",
+                type={"type": "str"},
+                description="Filter for last_name "
+                "(ex ?last_name=kazakov will return all users with last_name kazakov or users last_name wich include 'kazakov')",
+                required=False,
+                allow_blank=True,
+            ),
+            OpenApiParameter(
+                name="nick_name",
+                description="Filter for nick_name "
+                "(ex ?nick_name=hellford will return all users with nick_name hellford or users nick_name wich include 'hellford')",
+                required=False,
+                allow_blank=True,
+            ),
+            OpenApiParameter(
+                name="sex",
+                description="Filter for sex of user "
+                "(ex ?last_name=Woman will return all users women)",
+                required=False,
+                allow_blank=True,
+            ),
+        ],
+        description="Users are able to search for profiles by username or other criteria",
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        """User can update only their own profile"""
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        """User can patch only their own profile"""
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        """User can delete only their own profile"""
+        return super().destroy(request, *args, **kwargs)
+
     def perform_create(self, serializer: Serializer) -> None:
         serializer.save(user=self.request.user)
 
     @action(methods=["GET", "DELETE", "PATCH"], detail=False, url_path="me")
     def me(self, request: Request) -> Response:
+        """Users are able to retrieve their own profile"""
         profile = get_object_or_404(Profile, user=self.request.user)
 
         if request.method == "GET":
@@ -66,8 +117,17 @@ class ProfileViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
         elif request.method == "DELETE":
             profile.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                {"message": "Profile was deleted"}, status=status.HTTP_204_NO_CONTENT
+            )
 
+    @extend_schema(
+        description="Users are able to follow other profiles.",
+        responses={
+            status.HTTP_200_OK: "Now you now following this profile",
+            status.HTTP_400_BAD_REQUEST: "You are already following this profile",
+        },
+    )
     @action(methods=["GET"], detail=True, url_path="follow")
     def follow(self, request: Request, pk=None) -> Response:
         profile_to_follow = self.get_object()
@@ -82,6 +142,13 @@ class ProfileViewSet(viewsets.ModelViewSet):
             {"message": "Now you now following this profile"}, status=status.HTTP_200_OK
         )
 
+    @extend_schema(
+        description="Users are able to unfollow other profiles.",
+        responses={
+            status.HTTP_200_OK: "You have unfollowed this profile",
+            status.HTTP_400_BAD_REQUEST: "You are not follow this profile",
+        },
+    )
     @action(methods=["GET"], detail=True, url_path="unfollow")
     def unfollow(self, request: Request, pk=None) -> Response:
         profile_to_unfollow = self.get_object()
@@ -93,10 +160,17 @@ class ProfileViewSet(viewsets.ModelViewSet):
             )
         follow = follower.following.get(following=profile_to_unfollow)
         follow.delete()
-        return Response({"message": "You have unfollowed this profile"})
+        return Response(
+            {"message": "You have unfollowed this profile"}, status=status.HTTP_200_OK
+        )
 
+    @extend_schema(
+        description="List the profiles being followed by the authenticated user",
+        responses={status.HTTP_200_OK: ProfileFollowersSerializer},
+    )
     @action(methods=["GET"], detail=False, url_path="me/list_following")
     def list_following(self, request: Request) -> Response:
+        """Users are able to view the list of profiles they are following"""
         user_profile = request.user.profile
         followers = Follow.objects.filter(following=user_profile).select_related(
             "follower"
@@ -105,8 +179,10 @@ class ProfileViewSet(viewsets.ModelViewSet):
         serializer = ProfileFollowersSerializer(followers_profile, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(responses={status.HTTP_200_OK: UserSerializer})
     @action(methods=["GET"], detail=False, url_path="me/list_followers")
     def list_followers(self, request: Request) -> Response:
+        """Users are able to view the list of users following them"""
         user = request.user
         followings = Follow.objects.filter(follower=user)
         following_users = [following.following.user for following in followings]
@@ -150,6 +226,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
     @action(methods=["GET", "POST"], url_path="my_posts", detail=False)
     def my_posts(self, request: Request) -> Response:
+        """Users are able to retrieve a list of their own posts and create new one"""
         if request.method == "GET":
             posts = Post.objects.filter(user=request.user).select_related(
                 "user__profile"
@@ -162,6 +239,10 @@ class PostViewSet(viewsets.ModelViewSet):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        description="Users are able to retrieve posts of users they are following.",
+        responses={status.HTTP_200_OK: PostListSerializer}
+    )
     @action(methods=["GET"], detail=False, url_path="following_posts")
     def following_posts(self, request: Request) -> Response:
         following_profiles = Profile.objects.filter(followers__follower=request.user)
@@ -169,6 +250,10 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = PostListSerializer(posts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        description="Users are able to like and unlike posts.",
+        responses={status.HTTP_200_OK: PostDetailSerializer}
+    )
     @action(methods=["GET"], detail=True, url_path="like_unlike")
     def like_unlike(self, request: Request, pk=None) -> Response:
         post = get_object_or_404(Post, pk=pk)
@@ -180,6 +265,32 @@ class PostViewSet(viewsets.ModelViewSet):
             like = Like.objects.get(post=post, user=request.user)
             like.delete()
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        description="Users are able to view the list of posts they have liked.",
+        responses={status.HTTP_200_OK: PostListSerializer}
+    )
+    @action(methods=["GET"], detail=False, url_path="liked_posts")
+    def liked_posts(self, request):
+        likes = Like.objects.filter(user=request.user).select_related("post")
+        posts_id = [like.post.id for like in likes]
+        posts = Post.objects.filter(id__in=posts_id)
+        serializer = PostListSerializer(posts, many=True)
+        return Response(serializer.data, status.HTTP_200_OK)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="hashtag",
+                type={"type": "str"},
+                description="Filter for posts by hashtag "
+                "(ex ?hashtag=hashtag will return all posts with 'hashtag' word in topic or in text)",
+                required=False,
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class CommentViewSet(viewsets.ModelViewSet):

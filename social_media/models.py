@@ -85,7 +85,7 @@ class Post(models.Model):
 
     @property
     def get_likers(self) -> list:
-        likes = Like.objects.filter(post=self)
+        likes = Like.objects.filter(post=self).select_related("user")
         return [like.user.email for like in likes]
 
 
